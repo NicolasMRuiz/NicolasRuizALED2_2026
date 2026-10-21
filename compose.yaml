@@ -1,0 +1,21 @@
+services:
+  mysql:
+    image: mysql:8.4
+    ports:
+      - "127.0.0.1:${DB_PORT:-3307}:3306"
+    environment:
+      MYSQL_DATABASE: testdesk
+      MYSQL_USER: ${DB_USER:-testdesk_app}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-testdesk_local_dev}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_local_dev_change_me}
+    volumes:
+      - testdesk_data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01-testdesk.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", 'MYSQL_PWD="$$MYSQL_PASSWORD" mysql -h 127.0.0.1 -u "$$MYSQL_USER" -D testdesk -e "SELECT 1"']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+volumes:
+  testdesk_data:

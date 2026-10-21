@@ -1,0 +1,15 @@
+target/
+.tools/
+.env
+.env.*
+!.env.example
+*.tmp
+*.bak
+*.class
+*.jar
+*.log
+reports/
+nbproject/private/
+.idea/
+*.iml
+.DS_Store

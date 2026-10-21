@@ -1,0 +1,89 @@
+CREATE DATABASE IF NOT EXISTS testdesk CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+USE testdesk;
+
+CREATE TABLE IF NOT EXISTS test_cases (
+ id BIGINT PRIMARY KEY AUTO_INCREMENT,
+ title VARCHAR(160) NOT NULL,
+ description TEXT NOT NULL,
+ method VARCHAR(6) NOT NULL,
+ url VARCHAR(2048) NOT NULL,
+ headers TEXT NOT NULL,
+ body MEDIUMTEXT NOT NULL,
+ expected_status INT NOT NULL,
+ expected_text TEXT NOT NULL,
+ active BOOLEAN NOT NULL DEFAULT TRUE,
+ demo_key VARCHAR(50) NULL UNIQUE,
+ created_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+ updated_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+ CHECK (expected_status BETWEEN 100 AND 599),
+ CHECK (method IN ('GET','POST','PUT','DELETE')),
+ INDEX idx_cases_title(title)
+);
+CREATE TABLE IF NOT EXISTS test_plans (
+ id BIGINT PRIMARY KEY AUTO_INCREMENT,
+ name VARCHAR(160) NOT NULL,
+ description TEXT NOT NULL,
+ created_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+ updated_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+ INDEX idx_plans_name(name)
+);
+CREATE TABLE IF NOT EXISTS test_plan_cases (
+ plan_id BIGINT NOT NULL,
+ case_id BIGINT NOT NULL,
+ PRIMARY KEY(plan_id,case_id),
+ FOREIGN KEY(plan_id) REFERENCES test_plans(id) ON DELETE CASCADE,
+ FOREIGN KEY(case_id) REFERENCES test_cases(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS test_runs (
+ id BIGINT PRIMARY KEY AUTO_INCREMENT,
+ plan_id BIGINT NULL,
+ origin VARCHAR(180) NOT NULL,
+ started_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+ duration_ms BIGINT NOT NULL DEFAULT 0,
+ total INT NOT NULL DEFAULT 0,
+ passed INT NOT NULL DEFAULT 0,
+ failed INT NOT NULL DEFAULT 0,
+ errors INT NOT NULL DEFAULT 0,
+ skipped INT NOT NULL DEFAULT 0,
+ status VARCHAR(20) NOT NULL DEFAULT 'RUNNING',
+ FOREIGN KEY(plan_id) REFERENCES test_plans(id) ON DELETE SET NULL,
+ INDEX idx_runs_date(started_at)
+);
+CREATE TABLE IF NOT EXISTS test_results (
+ id BIGINT PRIMARY KEY AUTO_INCREMENT,
+ run_id BIGINT NOT NULL,
+ case_id BIGINT NULL,
+ case_title VARCHAR(160) NOT NULL,
+ method VARCHAR(6) NOT NULL,
+ url VARCHAR(2048) NOT NULL,
+ expected_status INT NOT NULL,
+ actual_status INT NULL,
+ expected_text TEXT NOT NULL,
+ started_at TIMESTAMP(3) NOT NULL,
+ duration_ms BIGINT NOT NULL,
+ status VARCHAR(5) NOT NULL,
+ message TEXT NOT NULL,
+ response_excerpt TEXT NOT NULL,
+ FOREIGN KEY(run_id) REFERENCES test_runs(id),
+ FOREIGN KEY(case_id) REFERENCES test_cases(id) ON DELETE SET NULL,
+ CHECK (status IN ('PASS','FAIL','ERROR'))
+);
+CREATE TABLE IF NOT EXISTS bugs (
+ id BIGINT PRIMARY KEY AUTO_INCREMENT,
+ title VARCHAR(160) NOT NULL,
+ description TEXT NOT NULL,
+ steps TEXT NOT NULL,
+ expected TEXT NOT NULL,
+ actual TEXT NOT NULL,
+ priority VARCHAR(10) NOT NULL,
+ status VARCHAR(15) NOT NULL,
+ case_id BIGINT NULL,
+ result_id BIGINT NULL,
+ created_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+ updated_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+ FOREIGN KEY(case_id) REFERENCES test_cases(id) ON DELETE SET NULL,
+ FOREIGN KEY(result_id) REFERENCES test_results(id),
+ CHECK(priority IN ('Baja','Media','Alta','Crítica')),
+ CHECK(status IN ('Abierto','En progreso','Resuelto')),
+ INDEX idx_bugs_filters(status,priority)
+);
